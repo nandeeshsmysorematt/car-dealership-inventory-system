@@ -24,3 +24,28 @@ class UserOut(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+class VehicleBase(BaseModel):
+    make: str = Field(min_length=1, max_length=50)
+    model: str = Field(min_length=1, max_length=50)
+    category: str = Field(min_length=1, max_length=50)
+    price: float = Field(gt=0)
+    quantity: int = Field(ge=0)
+
+
+class VehicleCreate(VehicleBase):
+    pass
+
+
+class VehicleUpdate(VehicleBase):
+    pass
+
+
+class VehicleOut(VehicleBase):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+
+
+class RestockRequest(BaseModel):
+    quantity: int = Field(gt=0)    

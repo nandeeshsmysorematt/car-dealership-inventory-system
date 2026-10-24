@@ -5,7 +5,7 @@ from fastapi import FastAPI
 
 from app import models  # noqa: F401  (registers the models with SQLAlchemy)
 from app.database import Base, engine
-from app.routers import auth
+from app.routers import auth, vehicles
 
 
 @asynccontextmanager
@@ -16,3 +16,4 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Car Dealership Inventory System", lifespan=lifespan)
 app.include_router(auth.router)
+app.include_router(vehicles.router)

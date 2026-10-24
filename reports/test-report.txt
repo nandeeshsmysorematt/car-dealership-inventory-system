@@ -1,0 +1,79 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.9, pytest-9.1.1, pluggy-1.7.0 -- C:\Users\Nandeeshsmysorematt\Documents\car-dealership-inventory-system\backend\venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\Nandeeshsmysorematt\Documents\car-dealership-inventory-system\backend
+configfile: pytest.ini
+testpaths: tests
+plugins: anyio-4.15.1, cov-7.1.0
+collecting ... collected 48 items
+
+tests/test_auth.py::TestRegister::test_register_returns_201_and_user_without_password PASSED [  2%]
+tests/test_auth.py::TestRegister::test_new_users_get_the_user_role PASSED [  4%]
+tests/test_auth.py::TestRegister::test_user_cannot_self_assign_admin_role PASSED [  6%]
+tests/test_auth.py::TestRegister::test_duplicate_email_returns_409 PASSED [  8%]
+tests/test_auth.py::TestRegister::test_invalid_email_returns_422 PASSED  [ 10%]
+tests/test_auth.py::TestRegister::test_short_password_returns_422 PASSED [ 12%]
+tests/test_auth.py::TestLogin::test_login_returns_bearer_token PASSED    [ 14%]
+tests/test_auth.py::TestLogin::test_wrong_password_returns_401 PASSED    [ 16%]
+tests/test_auth.py::TestLogin::test_unknown_user_returns_401 PASSED      [ 18%]
+tests/test_edge_cases.py::test_token_for_nonexistent_user_is_rejected PASSED [ 20%]
+tests/test_edge_cases.py::test_expired_token_is_rejected PASSED          [ 22%]
+tests/test_edge_cases.py::test_token_signed_with_wrong_key_is_rejected PASSED [ 25%]
+tests/test_edge_cases.py::test_get_db_yields_a_working_session PASSED    [ 27%]
+tests/test_edge_cases.py::test_startup_creates_tables PASSED             [ 29%]
+tests/test_edge_cases.py::test_register_handles_simultaneous_duplicate PASSED [ 31%]
+tests/test_vehicles.py::TestAuthRequired::test_list_requires_token PASSED [ 33%]
+tests/test_vehicles.py::TestAuthRequired::test_create_requires_token PASSED [ 35%]
+tests/test_vehicles.py::TestAuthRequired::test_purchase_requires_token PASSED [ 37%]
+tests/test_vehicles.py::TestAuthRequired::test_invalid_token_is_rejected PASSED [ 39%]
+tests/test_vehicles.py::TestCreateVehicle::test_create_returns_201_with_unique_id PASSED [ 41%]
+tests/test_vehicles.py::TestCreateVehicle::test_negative_price_returns_422 PASSED [ 43%]
+tests/test_vehicles.py::TestCreateVehicle::test_zero_price_returns_422 PASSED [ 45%]
+tests/test_vehicles.py::TestCreateVehicle::test_negative_quantity_returns_422 PASSED [ 47%]
+tests/test_vehicles.py::TestCreateVehicle::test_empty_make_returns_422 PASSED [ 50%]
+tests/test_vehicles.py::TestCreateVehicle::test_missing_field_returns_422 PASSED [ 52%]
+tests/test_vehicles.py::TestListVehicles::test_empty_list PASSED         [ 54%]
+tests/test_vehicles.py::TestListVehicles::test_list_includes_out_of_stock_vehicles PASSED [ 56%]
+tests/test_vehicles.py::TestSearchVehicles::test_search_by_make_is_case_insensitive PASSED [ 58%]
+tests/test_vehicles.py::TestSearchVehicles::test_search_by_model PASSED  [ 60%]
+tests/test_vehicles.py::TestSearchVehicles::test_search_by_category PASSED [ 62%]
+tests/test_vehicles.py::TestSearchVehicles::test_search_by_price_range PASSED [ 64%]
+tests/test_vehicles.py::TestSearchVehicles::test_search_combines_filters PASSED [ 66%]
+tests/test_vehicles.py::TestSearchVehicles::test_search_with_no_match_returns_empty_list PASSED [ 68%]
+tests/test_vehicles.py::TestSearchVehicles::test_search_requires_token PASSED [ 70%]
+tests/test_vehicles.py::TestUpdateVehicle::test_update_changes_fields PASSED [ 72%]
+tests/test_vehicles.py::TestUpdateVehicle::test_update_missing_vehicle_returns_404 PASSED [ 75%]
+tests/test_vehicles.py::TestUpdateVehicle::test_update_with_invalid_data_returns_422 PASSED [ 77%]
+tests/test_vehicles.py::TestDeleteVehicle::test_regular_user_cannot_delete PASSED [ 79%]
+tests/test_vehicles.py::TestDeleteVehicle::test_admin_can_delete PASSED  [ 81%]
+tests/test_vehicles.py::TestDeleteVehicle::test_delete_missing_vehicle_returns_404 PASSED [ 83%]
+tests/test_vehicles.py::TestPurchase::test_purchase_decreases_quantity_by_one PASSED [ 85%]
+tests/test_vehicles.py::TestPurchase::test_cannot_purchase_when_out_of_stock PASSED [ 87%]
+tests/test_vehicles.py::TestPurchase::test_last_unit_can_be_purchased_once_only PASSED [ 89%]
+tests/test_vehicles.py::TestPurchase::test_purchase_missing_vehicle_returns_404 PASSED [ 91%]
+tests/test_vehicles.py::TestRestock::test_admin_can_restock PASSED       [ 93%]
+tests/test_vehicles.py::TestRestock::test_regular_user_cannot_restock PASSED [ 95%]
+tests/test_vehicles.py::TestRestock::test_restock_amount_must_be_positive PASSED [ 97%]
+tests/test_vehicles.py::TestRestock::test_restock_missing_vehicle_returns_404 PASSED [100%]
+
+=============================== tests coverage ================================
+_______________ coverage: platform win32, python 3.13.9-final-0 _______________
+
+Name                              Stmts   Miss  Cover   Missing
+---------------------------------------------------------------
+app\__init__.py                       0      0   100%
+app\database.py                      13      0   100%
+app\dependencies.py                  24      0   100%
+app\main.py                          12      0   100%
+app\models.py                        17      0   100%
+app\routers\__init__.py               0      0   100%
+app\routers\auth.py                  18      0   100%
+app\routers\vehicles.py              45      0   100%
+app\schemas.py                       30      0   100%
+app\security.py                      17      0   100%
+app\services\__init__.py              0      0   100%
+app\services\auth_service.py         22      0   100%
+app\services\vehicle_service.py      55      0   100%
+---------------------------------------------------------------
+TOTAL                               253      0   100%
+============================= 48 passed in 19.01s =============================

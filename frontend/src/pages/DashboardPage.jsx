@@ -1,20 +1,34 @@
 import { useCallback, useEffect, useState } from 'react'
-import { fetchVehicles, purchaseVehicle, searchVehicles } from '../api/vehicles'
+import {
+  createVehicle,
+  deleteVehicle,
+  fetchVehicles,
+  purchaseVehicle,
+  restockVehicle,
+  searchVehicles,
+  updateVehicle,
+} from '../api/vehicles'
+import { useAuth } from '../auth/AuthContext'
+import ConfirmDeleteDialog from '../components/ConfirmDeleteDialog'
+import Modal from '../components/Modal'
 import Navbar from '../components/Navbar'
+import RestockDialog from '../components/RestockDialog'
 import SearchFilters from '../components/SearchFilters'
 import VehicleCard from '../components/VehicleCard'
+import VehicleForm from '../components/VehicleForm'
+
+const nameOf = (vehicle) => `${vehicle.make} ${vehicle.model}`
+const hasAnyFilter = (filters) => Object.values(filters).some((value) => value !== '')
 
 function describePurchaseError(error, vehicle) {
-  const name = `${vehicle.make} ${vehicle.model}`
   const status = error?.response?.status
-  if (status === 409) return `Sorry, ${name} is out of stock.`
-  if (status === 404) return `${name} is no longer available.`
+  if (status === 409) return `Sorry, ${nameOf(vehicle)} is out of stock.`
+  if (status === 404) return `${nameOf(vehicle)} is no longer available.`
   return 'Could not complete the purchase. Please try again.'
 }
 
-const hasAnyFilter = (filters) => Object.values(filters).some((value) => value !== '')
-
 export default function DashboardPage() {
+  const { isAdmin } = useAuth()
   const [vehicles, setVehicles] = useState([])
   const [loading, setLoading] = useState(true)
   const [loadFailed, setLoadFailed] = useState(false)
@@ -24,7 +38,11 @@ export default function DashboardPage() {
   const [notice, setNotice] = useState('')
   const [actionError, setActionError] = useState('')
 
-  // Loads the full list, or the filtered list when filters are active.
+  // Admin dialogs: which one is open and for which vehicle.
+  const [dialog, setDialog] = useState(null) // { type: 'form' | 'delete' | 'restock', vehicle? }
+  const [dialogBusy, setDialogBusy] = useState(false)
+  const [dialogError, setDialogError] = useState('')
+
   const loadVehicles = useCallback(async (filters = null) => {
     setLoading(true)
     setLoadFailed(false)
@@ -44,14 +62,28 @@ export default function DashboardPage() {
     loadVehicles()
   }, [loadVehicles])
 
+  const replaceVehicle = (updated) =>
+    setVehicles((current) => current.map((v) => (v.id === updated.id ? updated : v)))
+
+  function openDialog(next) {
+    setNotice('')
+    setActionError('')
+    setDialogError('')
+    setDialog(next)
+  }
+
+  const closeDialog = useCallback(() => {
+    setDialog(null)
+    setDialogError('')
+  }, [])
+
   async function handlePurchase(vehicle) {
     setNotice('')
     setActionError('')
     setPurchasingId(vehicle.id)
     try {
-      const updated = await purchaseVehicle(vehicle.id)
-      setVehicles((current) => current.map((v) => (v.id === updated.id ? updated : v)))
-      setNotice(`Purchased ${vehicle.make} ${vehicle.model}.`)
+      replaceVehicle(await purchaseVehicle(vehicle.id))
+      setNotice(`Purchased ${nameOf(vehicle)}.`)
     } catch (error) {
       setActionError(describePurchaseError(error, vehicle))
       // Stock may have changed under us, so quietly refresh the current view.
@@ -62,12 +94,84 @@ export default function DashboardPage() {
     }
   }
 
+  // Runs an admin action, then closes the dialog on success or shows an error.
+  async function runDialogAction(action, onSuccess, failureMessage) {
+    setDialogBusy(true)
+    setDialogError('')
+    try {
+      const result = await action()
+      onSuccess(result)
+      closeDialog()
+    } catch {
+      setDialogError(failureMessage)
+    } finally {
+      setDialogBusy(false)
+    }
+  }
+
+  function handleSaveVehicle(values) {
+    const editing = dialog.vehicle
+    return runDialogAction(
+      () => (editing ? updateVehicle(editing.id, values) : createVehicle(values)),
+      (saved) => {
+        if (editing) {
+          replaceVehicle(saved)
+          setNotice(`Updated ${nameOf(saved)}.`)
+        } else {
+          setVehicles((current) => [...current, saved])
+          setNotice(`Added ${nameOf(saved)}.`)
+        }
+      },
+      'Could not save the vehicle. Please check the details and try again.',
+    )
+  }
+
+  async function handleConfirmDelete() {
+    const target = dialog.vehicle
+    setDialogBusy(true)
+    try {
+      await deleteVehicle(target.id)
+      setVehicles((current) => current.filter((v) => v.id !== target.id))
+      setNotice(`Deleted ${nameOf(target)}.`)
+    } catch {
+      setActionError(`Could not delete ${nameOf(target)}.`)
+    } finally {
+      setDialogBusy(false)
+      closeDialog()
+    }
+  }
+
+  function handleRestock(quantity) {
+    const target = dialog.vehicle
+    return runDialogAction(
+      () => restockVehicle(target.id, quantity),
+      (updated) => {
+        replaceVehicle(updated)
+        setNotice(`Restocked ${nameOf(target)}.`)
+      },
+      'Could not restock the vehicle. Please try again.',
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950">
       <Navbar />
       <main className="mx-auto max-w-6xl px-4 py-8">
-        <h1 className="text-3xl font-bold text-white">Available vehicles</h1>
-        <p className="mt-1 text-slate-300">Browse the current inventory and purchase a vehicle.</p>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-3xl font-bold text-white">Available vehicles</h1>
+            <p className="mt-1 text-slate-300">Browse the current inventory and purchase a vehicle.</p>
+          </div>
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => openDialog({ type: 'form', vehicle: null })}
+              className="rounded-lg bg-emerald-500 px-4 py-2 font-semibold text-white hover:bg-emerald-400"
+            >
+              Add vehicle
+            </button>
+          )}
+        </div>
 
         <SearchFilters onSearch={loadVehicles} />
 
@@ -111,11 +215,44 @@ export default function DashboardPage() {
                 vehicle={vehicle}
                 onPurchase={handlePurchase}
                 busy={purchasingId === vehicle.id}
+                isAdmin={isAdmin}
+                onEdit={(v) => openDialog({ type: 'form', vehicle: v })}
+                onDelete={(v) => openDialog({ type: 'delete', vehicle: v })}
+                onRestock={(v) => openDialog({ type: 'restock', vehicle: v })}
               />
             ))}
           </div>
         )}
       </main>
+
+      {isAdmin && dialog?.type === 'form' && (
+        <Modal label={dialog.vehicle ? 'Edit vehicle' : 'Add vehicle'} onClose={closeDialog}>
+          <VehicleForm
+            vehicle={dialog.vehicle}
+            onSubmit={handleSaveVehicle}
+            onCancel={closeDialog}
+            submitting={dialogBusy}
+            error={dialogError}
+          />
+        </Modal>
+      )}
+      {isAdmin && dialog?.type === 'delete' && (
+        <ConfirmDeleteDialog
+          vehicle={dialog.vehicle}
+          onConfirm={handleConfirmDelete}
+          onCancel={closeDialog}
+          busy={dialogBusy}
+        />
+      )}
+      {isAdmin && dialog?.type === 'restock' && (
+        <RestockDialog
+          vehicle={dialog.vehicle}
+          onSubmit={handleRestock}
+          onCancel={closeDialog}
+          submitting={dialogBusy}
+          error={dialogError}
+        />
+      )}
     </div>
   )
 }

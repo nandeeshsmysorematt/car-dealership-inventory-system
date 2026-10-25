@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
-import { fetchVehicles, purchaseVehicle } from '../api/vehicles'
+import { fetchVehicles, purchaseVehicle, searchVehicles } from '../api/vehicles'
 import Navbar from '../components/Navbar'
+import SearchFilters from '../components/SearchFilters'
 import VehicleCard from '../components/VehicleCard'
 
 function describePurchaseError(error, vehicle) {
@@ -11,20 +12,28 @@ function describePurchaseError(error, vehicle) {
   return 'Could not complete the purchase. Please try again.'
 }
 
+const hasAnyFilter = (filters) => Object.values(filters).some((value) => value !== '')
+
 export default function DashboardPage() {
   const [vehicles, setVehicles] = useState([])
   const [loading, setLoading] = useState(true)
   const [loadFailed, setLoadFailed] = useState(false)
+  const [loadError, setLoadError] = useState('')
+  const [activeFilters, setActiveFilters] = useState(null)
   const [purchasingId, setPurchasingId] = useState(null)
   const [notice, setNotice] = useState('')
   const [actionError, setActionError] = useState('')
 
-  const loadVehicles = useCallback(async () => {
+  // Loads the full list, or the filtered list when filters are active.
+  const loadVehicles = useCallback(async (filters = null) => {
     setLoading(true)
     setLoadFailed(false)
+    const searching = filters !== null && hasAnyFilter(filters)
     try {
-      setVehicles(await fetchVehicles())
+      setVehicles(searching ? await searchVehicles(filters) : await fetchVehicles())
+      setActiveFilters(searching ? filters : null)
     } catch {
+      setLoadError(searching ? 'Could not search vehicles.' : 'Could not load vehicles.')
       setLoadFailed(true)
     } finally {
       setLoading(false)
@@ -45,8 +54,9 @@ export default function DashboardPage() {
       setNotice(`Purchased ${vehicle.make} ${vehicle.model}.`)
     } catch (error) {
       setActionError(describePurchaseError(error, vehicle))
-      // Stock may have changed under us, so quietly refresh the list.
-      fetchVehicles().then(setVehicles).catch(() => {})
+      // Stock may have changed under us, so quietly refresh the current view.
+      const refresh = activeFilters ? searchVehicles(activeFilters) : fetchVehicles()
+      refresh.then(setVehicles).catch(() => {})
     } finally {
       setPurchasingId(null)
     }
@@ -58,6 +68,8 @@ export default function DashboardPage() {
       <main className="mx-auto max-w-6xl px-4 py-8">
         <h1 className="text-3xl font-bold text-white">Available vehicles</h1>
         <p className="mt-1 text-slate-300">Browse the current inventory and purchase a vehicle.</p>
+
+        <SearchFilters onSearch={loadVehicles} />
 
         {notice && (
           <p role="status" className="mt-4 rounded-lg bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300">
@@ -74,10 +86,10 @@ export default function DashboardPage() {
 
         {!loading && loadFailed && (
           <div className="mt-10">
-            <p role="alert" className="text-red-300">Could not load vehicles.</p>
+            <p role="alert" className="text-red-300">{loadError}</p>
             <button
               type="button"
-              onClick={loadVehicles}
+              onClick={() => loadVehicles(activeFilters)}
               className="mt-3 rounded-lg bg-indigo-500 px-4 py-2 font-semibold text-white hover:bg-indigo-400"
             >
               Try again
@@ -86,7 +98,9 @@ export default function DashboardPage() {
         )}
 
         {!loading && !loadFailed && vehicles.length === 0 && (
-          <p className="mt-10 text-slate-300">No vehicles found.</p>
+          <p className="mt-10 text-slate-300">
+            {activeFilters ? 'No vehicles match your search.' : 'No vehicles found.'}
+          </p>
         )}
 
         {!loading && !loadFailed && vehicles.length > 0 && (
